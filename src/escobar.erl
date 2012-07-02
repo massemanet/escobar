@@ -12,8 +12,7 @@
 -export([go/0,log/2]).
 
 -import(lists,[foldl/3,append/1,foreach/2,reverse/1,member/2]).
--import(dict,[new/0,to_list/1,store/3,fetch/2,append/3]).
--import(filename,[basename/1,basename/2,dirname/1]).
+-import(dict,[new/0,fetch/2,append/3]).
 
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
@@ -57,7 +56,7 @@ get_html(XrzFile) ->
     {ok,FD} = file:open(XrzFile,[read,compressed]),
     try 
         {ok,{filename,RL}} = io:read(FD,''),
-        escobar_tree:html(escobar_file:get_tree(RL),basename(RL))
+        escobar_tree:html(escobar_file:get_tree(RL),filename:basename(RL))
     after
         file:close(FD)
     end.
@@ -107,7 +106,7 @@ up2date(From,RegExp,To,Exts) ->
     filelib:fold_files(From,RegExp,true,FF_F,[]).
 
 u2d(Targ,Acc,To,{OldExt,NewExt}) ->
-    Dest = join([To,basename(Targ,OldExt)])++NewExt,
+    Dest = join([To,filename:basename(Targ,OldExt)])++NewExt,
     try up2d(Targ,Dest), Acc
     catch _:_ -> [{Targ,Dest}|Acc]
     end.

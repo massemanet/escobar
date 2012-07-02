@@ -23,8 +23,8 @@
 	 list/1,list_elements/1,
 	 macro/2,macro_name/1,macro_arguments/1,
 	 module_qualifier_body/1, module_qualifier_argument/1,
-	 string/1,string_value/1,string_literal/1,
-	 variable_literal/1,variable_name/1,
+	 string/1,string_value/1,  %string_literal/1,
+         variable_name/1,          %variable_literal/1,
 	 record_access/3, record_access_argument/1, 
 	 record_access_field/1,record_access_type/1,
 	 record_expr/3, record_expr_argument/1, 
@@ -35,7 +35,7 @@
 	 copy_comments/2,remove_comments/1]).
 
 -import(prettypr,
-	[above/2,follow/2,beside/2,empty/0,
+	[above/2,beside/2,empty/0,
 	 null_text/1,break/1,floating/3,text/1,floating/1]).
 
 -import(lists,[flatten/1,duplicate/2,keysearch/3,member/2,usort/1]).
@@ -121,10 +121,11 @@ ann(binary,Tree) ->
   new_tree(Tree,add_anno("binary",Tree));    
 ann(attribute,Tree) ->
   Name = attribute_name(Tree),
+  Args = 
   case atom_value(Name) of
     export ->
       AQs = list_elements(hd(attribute_arguments(Tree))),
-      Args = [list([add_anno(mu(export,AQ),AQ) || AQ <- AQs])];
+      [list([add_anno(mu(export,AQ),AQ) || AQ <- AQs])];
     define ->
       [Macro|Rest] = attribute_arguments(Tree),
       put_cache({{macro_def,safe_name(Macro)},"#mac-"++str_name(Macro)}),
@@ -132,14 +133,14 @@ ann(attribute,Tree) ->
         application ->
           Op = application_operator(Macro),
           As = application_arguments(Macro),
-          Args = [application(add_anno(mu(define,Op),Op),As)|Rest];
+          [application(add_anno(mu(define,Op),Op),As)|Rest];
         _ ->
-          Args = [add_anno(mu(define,Macro),Macro)|Rest]
+          [add_anno(mu(define,Macro),Macro)|Rest]
       end;
     record ->
       [Rec|Rest] = attribute_arguments(Tree),
       put_cache({{record_def,safe_name(Rec)},"#rec-"++str_name(Rec)}),
-      Args = [add_anno(mu(record,Rec),Rec)|Rest];
+      [add_anno(mu(record,Rec),Rec)|Rest];
     X when X==include; X==include_lib ->
       [IncTree] = attribute_arguments(Tree),
       Inc = basename(string_value(IncTree)),
@@ -147,9 +148,9 @@ ann(attribute,Tree) ->
       Incs = escobar_xref:recurse_inc(Inc),
       put_cache({includes,usort(Incs++OIncs)}),
       %%should be a link->.hrl
-      Args = [add_anno(mu(include,IncTree),IncTree)];
+      [add_anno(mu(include,IncTree),IncTree)];
     _ ->
-      Args = attribute_arguments(Tree)
+      attribute_arguments(Tree)
   end,
   new_tree(Tree,attribute(Name,Args));
 ann(record_access,Tree) ->
@@ -285,7 +286,7 @@ mu(application,Node) ->
       nil
   end;
 mu(X,_Node) -> 
-  erlang:fault({bad_type,X}).
+  erlang:error({bad_type,X}).
 
 
 
@@ -321,9 +322,9 @@ dehtml(Tag,Atts) ->
   {flatten([$<,str(Tag),$ ,[[str(A),"=\"",str(V),"\" "]||{A,V}<-Atts],$>]),
   flatten(["</",str(Tag),$>])}.
 
-str(I) when integer(I) -> integer_to_list(I);
-str(A) when atom(A) -> atom_to_list(A);
-str(L) when list(L) -> L.
+str(I) when is_integer(I) -> integer_to_list(I);
+str(A) when is_atom(A) -> atom_to_list(A);
+str(L) when is_list(L) -> L.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% cache is implemented as a list of tagged tuples in the process registry.

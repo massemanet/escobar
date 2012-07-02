@@ -12,20 +12,21 @@
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
 -import(erl_syntax, 
-	[get_ann/1,add_ann/2,subtrees/1,update_tree/2,type/1,get_pos/1,
+	[get_ann/1,add_ann/2,subtrees/1,update_tree/2,type/1,%get_pos/1,
 	 application/2,application_arguments/1,application_operator/1,
-	 arity_qualifier_argument/1,arity_qualifier_body/1,
-	 atom_name/1,atom_value/1,
+	 %arity_qualifier_argument/1,arity_qualifier_body/1,
+	 %atom_name/1,
+         atom_value/1,
 	 attribute/2,attribute_name/1,attribute_arguments/1,
-         clause/3,clause_patterns/1,clause_guard/1,clause_body/1,
+         %clause/3,clause_patterns/1,clause_guard/1,clause_body/1,
 	 comment/2,comment_text/1,comment_padding/1,
-	 function/2,function_name/1,function_clauses/1,function_arity/1,
-	 integer_literal/1,
+	 function/2,function_name/1,function_clauses/1,%function_arity/1,
+	 %integer_literal/1,
 	 list/1,list_elements/1,
 	 macro/2,macro_name/1,macro_arguments/1,
 	 module_qualifier_body/1, module_qualifier_argument/1,
-	 string_value/1,string_literal/1,
-	 variable_literal/1,variable_name/1,
+	 string_value/1,%string_literal/1,
+	 %variable_literal/1,variable_name/1,
 	 record_access/3, record_access_argument/1, 
 	 record_access_field/1,record_access_type/1,
 	 record_expr/3, record_expr_argument/1, 
@@ -37,12 +38,10 @@
 	 copy_comments/2,remove_comments/1]).
 
 -import(prettypr,
-	[above/2,follow/2,beside/2,empty/0,
+	[above/2,beside/2,empty/0,
 	 null_text/1,break/1,floating/3,text/1,floating/1]).
 
--import(lists,[flatten/1,duplicate/2,keysearch/3,member/2,usort/1,reverse/1]).
-
--import(filename,[join/1,basename/1]).
+-import(lists,[flatten/1,duplicate/2,member/2,reverse/1]).
 
 out(File,HtmlString) ->
   {ok,FD}=file:open(File,[write]),
@@ -181,30 +180,31 @@ ann(application,Tree) ->
   new_tree(Tree,application(add_anno(mu(application,Tree),Op),Args));
 ann(attribute,Tree) ->
   Name = attribute_name(Tree),
-  case atom_value(Name) of
-    export ->
-      AQs = list_elements(hd(attribute_arguments(Tree))),
-      Args = [list([add_anno(mu(export,Tree),AQ) || AQ <- AQs])];
-    import ->
-      [ImportMod,ImportFAs] = attribute_arguments(Tree),
-      AQs = list_elements(ImportFAs),
-      Args = [ImportMod,list([add_anno(mu(import,Tree),AQ) || AQ <- AQs])];
-    define ->
-      [Macro|Rest] = attribute_arguments(Tree),
-      case type(Macro) of
-        application ->
-          Op = application_operator(Macro),
-          As = application_arguments(Macro),
-          Args = [application(add_anno(mu(macro,Tree),Op),As)|Rest];
-        _ ->
-          Args = [add_anno(mu(macro,Tree),Macro)|Rest]
-      end;
-    record ->
-      [Rec|Rest] = attribute_arguments(Tree),
-      Args = [add_anno(mu(record,Tree),Rec)|Rest];
-    _ ->
-      Args = attribute_arguments(Tree)
-  end,
+  Args = 
+    case atom_value(Name) of
+      export ->
+        AQs = list_elements(hd(attribute_arguments(Tree))),
+        [list([add_anno(mu(export,Tree),AQ) || AQ <- AQs])];
+      import ->
+        [ImportMod,ImportFAs] = attribute_arguments(Tree),
+        AQs = list_elements(ImportFAs),
+        [ImportMod,list([add_anno(mu(import,Tree),AQ) || AQ <- AQs])];
+      define ->
+        [Macro|Rest] = attribute_arguments(Tree),
+        case type(Macro) of
+          application ->
+            Op = application_operator(Macro),
+            As = application_arguments(Macro),
+            [application(add_anno(mu(macro,Tree),Op),As)|Rest];
+          _ ->
+            [add_anno(mu(macro,Tree),Macro)|Rest]
+        end;
+      record ->
+        [Rec|Rest] = attribute_arguments(Tree),
+        [add_anno(mu(record,Tree),Rec)|Rest];
+      _ ->
+        attribute_arguments(Tree)
+    end,
   new_tree(Tree,attribute(add_anno(mu(attribute,Tree),Name),Args));
 ann(record_access,Tree) ->
   Arg = record_access_argument(Tree),
@@ -302,9 +302,9 @@ mu(Class,_Node) ->
 dehtml(Tag,Atts) ->
   flatten([$<,str(Tag),$ ,[[str(A),"=\"",str(V),"\" "]||{A,V}<-Atts],$>]).
 
-str(I) when integer(I) -> integer_to_list(I);
-str(A) when atom(A) -> atom_to_list(A);
-str(L) when list(L) -> L.
+str(I) when is_integer(I) -> integer_to_list(I);
+str(A) when is_atom(A) -> atom_to_list(A);
+str(L) when is_list(L) -> L.
 
 is_guard_or_builtin(atom,1)      ->guard;
 is_guard_or_builtin(binary,1)    ->guard;

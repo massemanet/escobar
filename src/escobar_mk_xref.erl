@@ -32,10 +32,7 @@
 
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
--import(filename,[join/1,basename/1,dirname/1]).
--import(lists, [foldl/3, member/2, reverse/1, 
-                sort/1, zip/2, foreach/2, map/2, usort/1]).
--import(erl_syntax,[subtrees/1,type/1,get_pos/1,
+-import(erl_syntax,[type/1,get_pos/1,
 		    application_operator/1,application_arguments/1,
 		    arity_qualifier_argument/1, arity_qualifier_body/1,
 		    atom_value/1,
@@ -52,7 +49,6 @@
 		    tuple_elements/1,
 		    variable_name/1]).
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 go(File) ->
     do_erl(File).
@@ -63,9 +59,10 @@ do_erl(FileName) ->
 
 folder(Tree,Acc) ->
     case each(type(Tree),Tree) of
-	ok -> Acc;
-	{Tag,Data,Pos} -> [{{Tag,Data},Pos}|Acc];
-        TDPs when is_list(TDPs) -> [{{T,D},P} || {T,D,P} <- reverse(TDPs)]++Acc
+        ok -> Acc;
+        {Tag,Data,Pos} -> [{{Tag,Data},Pos}|Acc];
+        TDPs when is_list(TDPs) ->
+            [{{T,D},P} || {T,D,P} <- lists:reverse(TDPs)]++Acc
     end.
 
 each(text,Tree) ->
@@ -103,7 +100,7 @@ handle_shit(Tree) ->
 
 remove_shitty_macros(Ts) ->
     LL = find_shitty_macro(Ts),
-    L = usort(LL),
+    L = lists:usort(LL),
     Fs = [fun() -> {SM,epp_dodger:normal_parser(remove_shitty_macro(Ts,SM),[])}
           end 
           || SM <- L],
@@ -143,7 +140,7 @@ h_application(Appl) ->
  	{M,F} -> 
  	    Ari = length(application_arguments(Appl)),
  	    {global_call,{M,F,Ari},get_pos(Appl)};
-	F when atom(F) ->
+	F when is_atom(F) ->
 	    Ari = length(application_arguments(Appl)),
  	    {local_call,{F,Ari},get_pos(Appl)}
     end.
