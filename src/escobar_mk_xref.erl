@@ -2,9 +2,9 @@
 %%% File    : escobar_mk_xref.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
 
-%%% Description : builds the on-disk cross reference data base.  
+%%% Description : builds the on-disk cross reference data base.
 %%%
-%%% Info about each target file is stored in the xref file. 
+%%% Info about each target file is stored in the xref file.
 %%%
 %%% the xref file is a gzipped text file. it contains 2 terms.
 %%% first term;
@@ -33,27 +33,27 @@
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
 -import(erl_syntax,[type/1,get_pos/1,
-		    application_operator/1,application_arguments/1,
-		    arity_qualifier_argument/1, arity_qualifier_body/1,
-		    atom_value/1,
-		    attribute_arguments/1,attribute_name/1,
-		    integer_value/1,
-		    list_elements/1,
-		    macro_name/1,
-		    module_qualifier_argument/1, module_qualifier_body/1,
-		    record_access_type/1,
-		    record_expr_type/1,
-		    record_index_expr_type/1,
-		    string_value/1,
+                    application_operator/1,application_arguments/1,
+                    arity_qualifier_argument/1, arity_qualifier_body/1,
+                    atom_value/1,
+                    attribute_arguments/1,attribute_name/1,
+                    integer_value/1,
+                    list_elements/1,
+                    macro_name/1,
+                    module_qualifier_argument/1, module_qualifier_body/1,
+                    record_access_type/1,
+                    record_expr_type/1,
+                    record_index_expr_type/1,
+                    string_value/1,
                     text_string/1,
-		    tuple_elements/1,
-		    variable_name/1]).
+                    tuple_elements/1,
+                    variable_name/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 go(File) ->
     do_erl(File).
 
-do_erl(FileName) -> 
+do_erl(FileName) ->
     Tree = escobar_file:get_tree(FileName),
     erl_syntax_lib:fold(fun folder/2,[],Tree).
 
@@ -85,15 +85,15 @@ handle_shit(Tree) ->
     Pos = get_pos(Tree),
     String = text_string(Tree),
     case erl_scan:string(String,Pos) of
-        {ok,[{'-',_},{_,_,define},{'(',_},{_,_,Macro}|_],_} -> 
+        {ok,[{'-',_},{_,_,define},{'(',_},{_,_,Macro}|_],_} ->
             ?LOG([shitty_macro_def,{macro,Macro}]),
             {macro_def,Macro,Pos};
-        {ok,Ts,_} -> 
-            try 
+        {ok,Ts,_} ->
+            try
                 {SM,Form} = or_else([fun()-> remove_shitty_macros(Ts) end]),
                 ?LOG([removed_shitty_macro,{macro,SM}]),
                 [{macro,SM,Pos}|erl_syntax_lib:fold(fun folder/2,[],Form)]
-            catch 
+            catch
                 _:R -> ?LOG([bad_form,{tree,Tree},{reason,R}]),ok
             end
     end.
@@ -102,11 +102,11 @@ remove_shitty_macros(Ts) ->
     LL = find_shitty_macro(Ts),
     L = lists:usort(LL),
     Fs = [fun() -> {SM,epp_dodger:normal_parser(remove_shitty_macro(Ts,SM),[])}
-          end 
+          end
           || SM <- L],
     or_else(Fs).
 
-remove_shitty_macro([{'?',_},{_,_,SM},{'(',_}|R],SM) -> 
+remove_shitty_macro([{'?',_},{_,_,SM},{'(',_}|R],SM) ->
     remove_shitty_macro(drop_parens(R,1),SM);
 remove_shitty_macro([{'?',_},{_,_,SM}|R],SM) -> remove_shitty_macro(R,SM);
 remove_shitty_macro([X|R],SM) -> [X|remove_shitty_macro(R,SM)];
@@ -136,21 +136,21 @@ drop_parens([_|R],N) -> drop_parens(R,N).
 h_application(Appl) ->
     Op = application_operator(Appl),
     case appl_op(Op) of
- 	ok -> ok;
- 	{M,F} -> 
- 	    Ari = length(application_arguments(Appl)),
- 	    {global_call,{M,F,Ari},get_pos(Appl)};
-	F when is_atom(F) ->
-	    Ari = length(application_arguments(Appl)),
- 	    {local_call,{F,Ari},get_pos(Appl)}
+        ok -> ok;
+        {M,F} ->
+            Ari = length(application_arguments(Appl)),
+            {global_call,{M,F,Ari},get_pos(Appl)};
+        F when is_atom(F) ->
+            Ari = length(application_arguments(Appl)),
+            {local_call,{F,Ari},get_pos(Appl)}
     end.
 
 appl_op(Op) ->
     case type(Op) of
-	module_qualifier -> appl_modq(Op);
-	tuple -> appl_tup(Op);
-	atom -> appl_atom(Op);
-	_ -> ok
+        module_qualifier -> appl_modq(Op);
+        tuple -> appl_tup(Op);
+        atom -> appl_atom(Op);
+        _ -> ok
     end.
 
 appl_atom(X) ->
@@ -165,16 +165,16 @@ appl_modq(MQ) ->
 
 appl_mf(Mod,Fun) ->
     case {type(Mod),type(Fun)} of
-	{atom,atom} -> {atom_value(Mod),atom_value(Fun)};
-	{atom,_} -> {atom_value(Mod),'VAR'};
-	{_,atom} -> {'VAR',atom_value(Fun)};
-	_ -> ok
+        {atom,atom} -> {atom_value(Mod),atom_value(Fun)};
+        {atom,_} -> {atom_value(Mod),'VAR'};
+        {_,atom} -> {'VAR',atom_value(Fun)};
+        _ -> ok
     end.
-	     
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% macro
 
-h_macro(Macro) -> 
+h_macro(Macro) ->
     {macro,macro_nam(macro_name(Macro)),get_pos(Macro)}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -182,34 +182,34 @@ h_macro(Macro) ->
 
 h_attribute(Name,Args) ->
     case Name of
- 	define -> macro_def(Args);
- 	import -> import(Args);
- 	export -> export(Args);
- 	include -> include(Args);
- 	include_lib -> include(Args);
- 	record -> record_def(Args);
- 	_ -> ok
+        define -> macro_def(Args);
+        import -> import(Args);
+        export -> export(Args);
+        include -> include(Args);
+        include_lib -> include(Args);
+        record -> record_def(Args);
+        _ -> ok
     end.
 
-macro_def(Args) -> 
+macro_def(Args) ->
     {macro_def, macro_nam(hd(Args)),get_pos(hd(Args))}.
 
 macro_nam(X) ->
     case type(X) of
-	variable -> variable_name(X);
-	atom -> atom_value(X);
-	application -> macro_nam(application_operator(X))
+        variable -> variable_name(X);
+        atom -> atom_value(X);
+        application -> macro_nam(application_operator(X))
     end.
 
-import([ModTree,AQs]) -> 
+import([ModTree,AQs]) ->
     {import, {atom_value(ModTree),aqlist(AQs)},get_pos(ModTree)}.
 
-export([AQlist]) -> 
+export([AQlist]) ->
     {export,aqlist(AQlist),get_pos(AQlist)}.
 
 aqlist(AQs) -> lists:map(fun aqs/1, list_elements(AQs)).
 aqs(AQ) -> {atom_value(arity_qualifier_body(AQ)),
-	    integer_value(arity_qualifier_argument(AQ))}.
+            integer_value(arity_qualifier_argument(AQ))}.
 
 include(Args) ->
     {include, string_value(hd(Args)),get_pos(hd(Args))}.
@@ -222,6 +222,6 @@ record_def(Args) ->
 
 h_record(RecType) ->
     case catch type(RecType) of
-	atom -> {record, atom_value(RecType), get_pos(RecType)};
-	_ -> ok
+        atom -> {record, atom_value(RecType), get_pos(RecType)};
+        _ -> ok
     end.
