@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : escobar_file.erl
 %%% Author  : Mats Cronqvist <etxmacr@mwux005>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  6 Jun 2005 by Mats Cronqvist <etxmacr@mwux005>
 %%%-------------------------------------------------------------------
@@ -13,15 +13,15 @@
 
 get_tree(Filename) ->
     case file:read_file_info(Filename) of
-	{ok,_} -> 
-	    case filename:extension(Filename) of
-		".beam" -> get_tree_beam(Filename);
-		".erl" -> get_comm_tree_erl(Filename);
-		".hrl" -> get_comm_tree_erl(Filename);
-		_ -> erlang:error({unknown_filetype,Filename})
-	    end;
-	_ ->
-	    throw(no_file)
+        {ok,_} ->
+            case filename:extension(Filename) of
+                ".beam" -> get_tree_beam(Filename);
+                ".erl" -> get_comm_tree_erl(Filename);
+                ".hrl" -> get_comm_tree_erl(Filename);
+                _ -> erlang:error({unknown_filetype,Filename})
+            end;
+        _ ->
+            throw(no_file)
     end.
 
 get_comm_tree_erl(Filename) ->
@@ -31,11 +31,11 @@ get_comm_tree_erl(Filename) ->
 
 get_tree_beam(Filename) ->
     case beam_lib:chunks(Filename,["Abst"]) of
-	{ok,{_,[{"Abst",AChunk}]}} ->
-	    {_,Forms} = binary_to_term(AChunk),
-	    erl_syntax:form_list(Forms);
-	_ ->
-	    erlang:error({no_debuginfo,Filename})
+        {ok,{_,[{"Abst",AChunk}]}} ->
+            {_,Forms} = binary_to_term(AChunk),
+            erl_syntax:form_list(Forms);
+        _ ->
+            erlang:error({no_debuginfo,Filename})
     end.
 
 get_forms_erl(Filename) ->

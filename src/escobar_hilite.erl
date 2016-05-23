@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : escobar_tree.erl
 %%% Author  : Mats Cronqvist <etxmacr@mwux005>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  6 Jun 2005 by Mats Cronqvist <etxmacr@mwux005>
 %%%-------------------------------------------------------------------
@@ -11,35 +11,35 @@
 
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
--import(erl_syntax, 
-	[get_ann/1,add_ann/2,subtrees/1,update_tree/2,type/1,%get_pos/1,
-	 application/2,application_arguments/1,application_operator/1,
-	 %arity_qualifier_argument/1,arity_qualifier_body/1,
-	 %atom_name/1,
+-import(erl_syntax,
+        [get_ann/1,add_ann/2,subtrees/1,update_tree/2,type/1,%get_pos/1,
+         application/2,application_arguments/1,application_operator/1,
+         %arity_qualifier_argument/1,arity_qualifier_body/1,
+         %atom_name/1,
          atom_value/1,
-	 attribute/2,attribute_name/1,attribute_arguments/1,
+         attribute/2,attribute_name/1,attribute_arguments/1,
          %clause/3,clause_patterns/1,clause_guard/1,clause_body/1,
-	 comment/2,comment_text/1,comment_padding/1,
-	 function/2,function_name/1,function_clauses/1,%function_arity/1,
-	 %integer_literal/1,
-	 list/1,list_elements/1,
-	 macro/2,macro_name/1,macro_arguments/1,
-	 module_qualifier_body/1, module_qualifier_argument/1,
-	 string_value/1,%string_literal/1,
-	 %variable_literal/1,variable_name/1,
-	 record_access/3, record_access_argument/1, 
-	 record_access_field/1,record_access_type/1,
-	 record_expr/3, record_expr_argument/1, 
-	 record_expr_fields/1, record_expr_type/1,
-	 record_index_expr/2, record_index_expr_field/1,
-	 record_index_expr_type/1,
+         comment/2,comment_text/1,comment_padding/1,
+         function/2,function_name/1,function_clauses/1,%function_arity/1,
+         %integer_literal/1,
+         list/1,list_elements/1,
+         macro/2,macro_name/1,macro_arguments/1,
+         module_qualifier_body/1, module_qualifier_argument/1,
+         string_value/1,%string_literal/1,
+         %variable_literal/1,variable_name/1,
+         record_access/3, record_access_argument/1,
+         record_access_field/1,record_access_type/1,
+         record_expr/3, record_expr_argument/1,
+         record_expr_fields/1, record_expr_type/1,
+         record_index_expr/2, record_index_expr_field/1,
+         record_index_expr_type/1,
          form_list/1,
-	 get_precomments/1,get_postcomments/1,has_comments/1, 
-	 copy_comments/2,remove_comments/1]).
+         get_precomments/1,get_postcomments/1,has_comments/1,
+         copy_comments/2,remove_comments/1]).
 
 -import(prettypr,
-	[above/2,beside/2,empty/0,
-	 null_text/1,break/1,floating/3,text/1,floating/1]).
+        [above/2,beside/2,empty/0,
+         null_text/1,break/1,floating/3,text/1,floating/1]).
 
 -import(lists,[flatten/1,duplicate/2,member/2,reverse/1]).
 
@@ -51,7 +51,7 @@ out(File,HtmlString) ->
     io:fwrite(FD,"href=\"escobar.css\"></link><body><pre>",[]),
     io:fwrite(FD,"~s",[HtmlString]),
     io:fwrite(FD,"</pre></body></html>",[])
-  after 
+  after
     file:close(FD)
   end.
 
@@ -66,7 +66,7 @@ scan_and_parse(Text,Line,Forms) ->
 
 file(FileName) ->
   case filelib:is_regular(FileName) of
-    true -> 
+    true ->
       case filename:extension(FileName) of
         ".beam"-> tree(get_tree_beam(FileName));
         ".erl" -> tree(get_comm_tree_erl(FileName));
@@ -99,7 +99,7 @@ get_forms_erl(Filename) ->
 %%% turn a syntax tree into html by annotating and pretty-printing
 %%% with a hook function
 
-tree(Tree) -> 
+tree(Tree) ->
   pout(ann(type(Tree),Tree)).
 
 %%lists:foldl(fun(Form,Acc) -> [pout(ann(Form))|Acc] end, [], Tree).
@@ -123,15 +123,15 @@ tag(Node,Ctxt,Cont) ->
       tagit(Tags,Doc0)
   end.
 
-tagit([],Doc0) -> 
+tagit([],Doc0) ->
   Doc0;
-tagit(["binary"],{beside,_,{beside,Doc,_}}) -> 
+tagit(["binary"],{beside,_,{beside,Doc,_}}) ->
   beside(floating(text("&lt;&lt;")),beside(Doc,floating(text("&gt;&gt;"))));
-tagit([Tag],Doc0) -> 
+tagit([Tag],Doc0) ->
   beside(null_text(Tag),beside(Doc0,null_text(etag(Tag)))).
 
 etag("<"++Tag) -> "</"++hd(string:tokens(Tag," "))++">".
-  
+
 %%%### comment stuff
 precomment(Doc,PreC) ->
   above(floating(break(stack(PreC)), -1, -1), Doc).
@@ -141,7 +141,7 @@ postcomment(Doc,PostC) ->
 stack([]) -> empty();
 stack([Comm|Comms]) ->
   Doc = maybe_pad(stack_comment_lines(comment_text(Comm)),Comm),
-  case Comms of 
+  case Comms of
     [] -> Doc;
     _ -> above(Doc, stack(Comms))
   end.
@@ -166,8 +166,8 @@ stack_comment_lines([]) ->
   empty().
 
 %%% annotate nodes that should be hilited
-%%% the annotation is put on the subtree that should be marked up 
-%%% the annotation is; 
+%%% the annotation is put on the subtree that should be marked up
+%%% the annotation is;
 %%% has_comments|Markup
 %%% if a node already has an annotation the new one is dropped, except
 %%% if either the new or the old one is has_comments
@@ -180,7 +180,7 @@ ann(application,Tree) ->
   new_tree(Tree,application(add_anno(mu(application,Tree),Op),Args));
 ann(attribute,Tree) ->
   Name = attribute_name(Tree),
-  Args = 
+  Args =
     case atom_value(Name) of
       export ->
         AQs = list_elements(hd(attribute_arguments(Tree))),
@@ -244,7 +244,7 @@ ann(_Typ,Tree) ->
   new_tree(Tree,Tree).
 
 new_tree(OTree,NTree) ->
-  Tree = 
+  Tree =
     case has_comments(OTree) of
       true -> add_ann(has_comment,copy_comments(OTree,NTree));
       false -> NTree
@@ -261,7 +261,7 @@ debracket([$<|Str]) -> "&lt;"++debracket(Str);
 debracket([C|Str]) -> [C|debracket(Str)].
 
 add_anno(nil,Tree) -> Tree;
-add_anno(Ann,Tree) -> 
+add_anno(Ann,Tree) ->
   case get_ann(Tree) of
     [] -> add_ann(Ann,Tree);
     [has_comment] -> add_ann(Ann,Tree);
@@ -275,17 +275,17 @@ mu(application,Node) ->
   case type(Op) of
 %%     variable ->
 %%       dehtml('span', [{class,variable}]);
-    atom -> 
+    atom ->
       case is_guard_or_builtin(atom_value(Op),Ar) of
         guard -> dehtml('span', [{class,guard}]);
         builtin->dehtml('span', [{class,builtin}]);
         neither->dehtml('span', [{class,call}])
       end;
-    module_qualifier -> 
+    module_qualifier ->
       Mod = module_qualifier_argument(Op),
       Fun = module_qualifier_body(Op),
       case {type(Mod),type(Fun)} of
-        {atom,atom} -> 
+        {atom,atom} ->
           case atom_value(Mod) of
             erlang -> dehtml('span', [{class,builtin}]);
             _ -> dehtml('span', [{class,call}])
@@ -296,7 +296,7 @@ mu(application,Node) ->
     _ ->
       nil
   end;
-mu(Class,_Node) -> 
+mu(Class,_Node) ->
   dehtml('span', [{class,Class}]).
 
 dehtml(Tag,Atts) ->
@@ -322,7 +322,7 @@ is_guard_or_builtin(tuple,1)     ->guard;
 is_guard_or_builtin(record,2)    ->guard;
 is_guard_or_builtin(record,3)    ->guard;
 is_guard_or_builtin(F,A) ->
-  case erlang:function_exported(erlang,F,A) orelse 
+  case erlang:function_exported(erlang,F,A) orelse
     erlang:is_builtin(erlang,F,A) of
     true -> builtin;
     false-> neither

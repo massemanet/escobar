@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : escobar_xref.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : owns the ets tables. populates the tables from the 
+%%% Description : owns the ets tables. populates the tables from the
 %%%               on-disk data base.
 %%%
 %%% Key is; {Tag,Data,Module}
@@ -30,10 +30,10 @@
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-recurse_inc(Inc) -> 
+recurse_inc(Inc) ->
     case ets:match(escobar,{{include,'$1',Inc},'_'}) of
-	[] -> [Inc];
-	Incs -> [Inc|append([recurse_inc(I) || [I] <- Incs])]
+        [] -> [Inc];
+        Incs -> [Inc|append([recurse_inc(I) || [I] <- Incs])]
     end.
 
 find(Kind,Name,Srcs) ->
@@ -65,7 +65,7 @@ xrefs(MOD,{{local_call,{F,A}},L}) ->   bagit({local_call,{tom(MOD),F,A},MOD},L);
 xrefs(MOD,{{macro,Macro},L}) ->        bagit({macro,Macro,MOD},L);
 xrefs(MOD,{{record,Record},L}) ->      bagit({record,Record,MOD},L).
 
-xfa(Tag,MOD,L,M,FAs) -> 
+xfa(Tag,MOD,L,M,FAs) ->
     foreach(fun({F,A}) -> bagit({Tag,{M,F,A},MOD},L) end, FAs).
 
 bagit(Key,Val) ->

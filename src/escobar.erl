@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : escobar.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  5 Oct 2006 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -32,11 +32,11 @@ mk_htmls(Conf) ->
     foreach(fun html/1, Files).
 
 html({XrzFile,HtmlFile}) ->
-    try 
+    try
         Html = get_html(XrzFile),
         {ok,FD} = file:open(HtmlFile,[write]),
         put(fd,FD),
-        try 
+        try
             write({html,[],
                    [{head,[],
                      [{link,[{rel,"stylesheet"},
@@ -47,14 +47,14 @@ html({XrzFile,HtmlFile}) ->
                        [{pre,[],[{raw,Html}]}]}]}]})
         after file:close(FD)
         end
-    catch 
+    catch
         throw:no_file -> file:delete(XrzFile);
           _:R -> ?LOG([htmlification_failed,{file,HtmlFile},{reason,R},stack])
     end.
 
 get_html(XrzFile) ->
     {ok,FD} = file:open(XrzFile,[read,compressed]),
-    try 
+    try
         {ok,{filename,RL}} = io:read(FD,''),
         escobar_tree:html(escobar_file:get_tree(RL),filename:basename(RL))
     after
@@ -123,30 +123,24 @@ conf(X,_) -> throw({bad_conf_item,X}).
 
 chk_dir(Dir) ->
     try
-        X = mk_dir(Dir),
-        true = filelib:is_dir(X),
-        X
+        true = filelib:is_dir(Dir),
+        Dir
     catch _:R -> throw({bad_target,Dir,R})
     end.
 
 ass_dir(Dir) ->
     try
-        X = mk_dir(Dir), ok=filelib:ensure_dir(X++"/dummy"), X
-    catch 
+        ok = filelib:ensure_dir(Dir++"/dummy"),
+        Dir
+    catch
         _:R -> throw({bad_target,Dir,R})
     end.
-
-mk_dir(Path) -> join([chk_dir_f(P) || P <- Path]).
-
-chk_dir_f(otp_root) -> code:root_dir();
-chk_dir_f(otp_vers) -> {_,V} = init:script_id(), V;
-chk_dir_f(X) when is_list(X) -> X.
 
 join(Toks) -> join(Toks,"/").
 join([Pref|Toks], Sep) -> foldl(fun(Tok,O) -> O++Sep++Tok end, Pref, Toks).
 
 log(ProcInfo,Term) when not is_list(Term) -> log(ProcInfo,[Term]);
-log(ProcInfo,List) -> 
+log(ProcInfo,List) ->
     case member(stack,List) of
         true -> log(ProcInfo,List++stk()--[stack]);
         false -> error_logger:info_report(cf(ProcInfo)++List)
