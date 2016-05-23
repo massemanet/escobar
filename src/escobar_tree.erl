@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : escobar_tree.erl
 %%% Author  : Mats Cronqvist <etxmacr@mwux005>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  6 Jun 2005 by Mats Cronqvist <etxmacr@mwux005>
 %%%-------------------------------------------------------------------
@@ -11,32 +11,32 @@
 
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
--import(erl_syntax, 
-	[get_ann/1,add_ann/2,subtrees/1,update_tree/2,type/1,get_pos/1,
-	 application/2,application_arguments/1,application_operator/1,
-	 arity_qualifier_argument/1,arity_qualifier_body/1,
-	 atom_name/1,atom_value/1,
-	 attribute/2,attribute_name/1,attribute_arguments/1,
-	 comment/2,comment_text/1,comment_padding/1,
-	 function/2,function_name/1,function_clauses/1,function_arity/1,
-	 integer_literal/1,
-	 list/1,list_elements/1,
-	 macro/2,macro_name/1,macro_arguments/1,
-	 module_qualifier_body/1, module_qualifier_argument/1,
-	 string/1,string_value/1,  %string_literal/1,
+-import(erl_syntax,
+        [get_ann/1,add_ann/2,subtrees/1,update_tree/2,type/1,get_pos/1,
+         application/2,application_arguments/1,application_operator/1,
+         arity_qualifier_argument/1,arity_qualifier_body/1,
+         atom_name/1,atom_value/1,
+         attribute/2,attribute_name/1,attribute_arguments/1,
+         comment/2,comment_text/1,comment_padding/1,
+         function/2,function_name/1,function_clauses/1,function_arity/1,
+         integer_literal/1,
+         list/1,list_elements/1,
+         macro/2,macro_name/1,macro_arguments/1,
+         module_qualifier_body/1, module_qualifier_argument/1,
+         string/1,string_value/1,  %string_literal/1,
          variable_name/1,          %variable_literal/1,
-	 record_access/3, record_access_argument/1, 
-	 record_access_field/1,record_access_type/1,
-	 record_expr/3, record_expr_argument/1, 
-	 record_expr_fields/1, record_expr_type/1,
-	 record_index_expr/2, record_index_expr_field/1,
-	 record_index_expr_type/1,
-	 get_precomments/1,get_postcomments/1,has_comments/1, 
-	 copy_comments/2,remove_comments/1]).
+         record_access/3, record_access_argument/1,
+         record_access_field/1,record_access_type/1,
+         record_expr/3, record_expr_argument/1,
+         record_expr_fields/1, record_expr_type/1,
+         record_index_expr/2, record_index_expr_field/1,
+         record_index_expr_type/1,
+         get_precomments/1,get_postcomments/1,has_comments/1,
+         copy_comments/2,remove_comments/1]).
 
 -import(prettypr,
-	[above/2,beside/2,empty/0,
-	 null_text/1,break/1,floating/3,text/1,floating/1]).
+        [above/2,beside/2,empty/0,
+         null_text/1,break/1,floating/3,text/1,floating/1]).
 
 -import(lists,[flatten/1,duplicate/2,keysearch/3,member/2,usort/1]).
 
@@ -46,7 +46,7 @@
 %%% turn a syntax tree into html by annotating and pretty-printing
 %%% with a hook function
 
-html(Tree,Basename) -> 
+html(Tree,Basename) ->
   clear_cache(),
   put_cache({basename,Basename}),
   pout(ann(type(Tree),Tree)).
@@ -74,7 +74,7 @@ tag(Node,Ctxt,Cont) ->
 
 tagit([],Doc0) -> Doc0;
 tagit([{Beg,End}],Doc0) -> beside(null_text(Beg),beside(Doc0,null_text(End)));
-tagit(["binary"],{beside,_,{beside,Doc,_}}) -> 
+tagit(["binary"],{beside,_,{beside,Doc,_}}) ->
   beside(floating(text("&lt;&lt;")),beside(Doc,floating(text("&gt;&gt;")))).
 
 %%%### comment stuff
@@ -86,7 +86,7 @@ postcomment(Doc,PostC) ->
 stack([]) -> empty();
 stack([Comm|Comms]) ->
   Doc = maybe_pad(stack_comment_lines(comment_text(Comm)),Comm),
-  case Comms of 
+  case Comms of
     [] -> Doc;
     _ -> above(Doc, stack(Comms))
   end.
@@ -111,17 +111,17 @@ stack_comment_lines([]) ->
   empty().
 
 %%% annotate nodes that should be hilited
-%%% the annotation is put on the subtree that should be marked up 
-%%% the annotation is; 
+%%% the annotation is put on the subtree that should be marked up
+%%% the annotation is;
 %%% has_comments|{BegMarkup,EndMarkup}
 %%% if a node already has an annotation the new one is dropped, except
 %%% if either the new or the old one is has_comments
 
 ann(binary,Tree) ->
-  new_tree(Tree,add_anno("binary",Tree));    
+  new_tree(Tree,add_anno("binary",Tree));
 ann(attribute,Tree) ->
   Name = attribute_name(Tree),
-  Args = 
+  Args =
   case atom_value(Name) of
     export ->
       AQs = list_elements(hd(attribute_arguments(Tree))),
@@ -195,7 +195,7 @@ ann(_Typ,Tree) ->
   new_tree(Tree,Tree).
 
 new_tree(OTree,NTree) ->
-  Tree = 
+  Tree =
     case has_comments(OTree) of
       true -> add_ann(has_comment,copy_comments(OTree,NTree));
       false -> NTree
@@ -212,7 +212,7 @@ debracket([$<|Str]) -> "&lt;"++debracket(Str);
 debracket([C|Str]) -> [C|debracket(Str)].
 
 add_anno(nil,Tree) -> Tree;
-add_anno(Ann,Tree) -> 
+add_anno(Ann,Tree) ->
   case get_ann(Tree) of
     [] -> add_ann(Ann,Tree);
     [has_comment] -> add_ann(Ann,Tree);
@@ -225,22 +225,22 @@ mu(string) -> dehtml('span', [{class,string}]);
 mu(variable) -> dehtml('span', [{class,variable}]);
 mu(error_marker) -> dehtml('span', [{class,error_marker}]).
 
-mu(function,Node) -> 
+mu(function,Node) ->
   M = get_cache(basename),
   F = atom_name(function_name(Node)),
   A = str(function_arity(Node)),
   dehtml('a', [{class,function},
                {href,M++"-ref.html#"++F++"/"++A},
                {name,F++"/"++A}]);
-mu(include,_Inc) -> 
+mu(include,_Inc) ->
   nil;
-mu(export,AQ) -> 
+mu(export,AQ) ->
   M = atom_name(arity_qualifier_body(AQ)),
   A = integer_literal(arity_qualifier_argument(AQ)),
   dehtml('a', [{href,".html#"++M++"/"++A},{class,export}]);
-mu(define,Macro) -> 
+mu(define,Macro) ->
   dehtml('a', [{class,macro},{name,"mac-"++str_name(Macro)}]);
-mu(record,Rec) -> 
+mu(record,Rec) ->
   dehtml('a', [{class,record},{name,"rec-"++str_name(Rec)}]);
 mu(rec_acc,Node) ->
   Name = atom_value(record_access_type(Node)),
@@ -264,14 +264,14 @@ mu(application,Node) ->
   case type(Op) of
     variable ->
       dehtml('span', [{class,variable}]);
-    atom -> 
+    atom ->
       dehtml('a', [{href,"#"++join([atom_name(Op),Ar])},
                    {name,str(get_pos(Op))}]);
-    module_qualifier -> 
+    module_qualifier ->
       Mod = module_qualifier_argument(Op),
       Fun = module_qualifier_body(Op),
       case {type(Mod),type(Fun)} of
-        {atom,atom} -> 
+        {atom,atom} ->
           M = atom_name(Mod),
           F = atom_name(Fun),
           Ref = M++".erl#"++F++"/"++Ar,
@@ -281,11 +281,11 @@ mu(application,Node) ->
       end;
     fun_expr ->
       nil;
-    _ -> 
+    _ ->
       ?LOG({bad_application_operator,[{node,Node}]}),
       nil
   end;
-mu(X,_Node) -> 
+mu(X,_Node) ->
   erlang:error({bad_type,X}).
 
 
@@ -306,7 +306,7 @@ href(Tag,Anch,Name) ->
       Basename = get_cache(basename),
       Srcs = [Basename|get_cache(includes)],
       case escobar_xref:find(Tag,Name,Srcs) of
-        Fs when 1 < length(Fs) -> 
+        Fs when 1 < length(Fs) ->
           ?LOG([multi_def,[{item,Name},{file,Basename},{files,Fs}]]),
           nil;
         [{File,_}] ->
