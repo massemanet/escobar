@@ -11,3 +11,7 @@
 .call {color: purple}
 .attribute {color: firebrick}
 .error{color: red}
+
+A:link {
+    text-decoration: none;
+}

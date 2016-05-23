@@ -237,7 +237,7 @@ mu(include,_Inc) ->
 mu(export,AQ) ->
   M = atom_name(arity_qualifier_body(AQ)),
   A = integer_literal(arity_qualifier_argument(AQ)),
-  dehtml('a', [{href,".html#"++M++"/"++A},{class,export}]);
+  dehtml('a', [{href,"#"++M++"/"++A},{class,export}]);
 mu(define,Macro) ->
   dehtml('a', [{class,macro},{name,"mac-"++str_name(Macro)}]);
 mu(record,Rec) ->
@@ -274,7 +274,7 @@ mu(application,Node) ->
         {atom,atom} ->
           M = atom_name(Mod),
           F = atom_name(Fun),
-          Ref = M++".erl#"++F++"/"++Ar,
+          Ref = M++".erl.html#"++F++"/"++Ar,
           dehtml(a, [{href,Ref},{name,str(get_pos(Op))}]);
         _ ->
           nil
