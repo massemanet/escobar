@@ -21,7 +21,7 @@
 %%%-------------------------------------------------------------------
 -module(escobar_xref).
 
--export([build/1,recurse_inc/1,find/2,find/3]).        % handle xrefs
+-export([build/1,recurse_inc/1,find/1,find/2,find/3]).        % handle xrefs
 
 -import(filelib,[fold_files/5]).
 -import(lists,[foreach/2,member/2,append/1]).
@@ -41,11 +41,14 @@ find(Kind,Name,Srcs) ->
 
 find(Kind,Name) ->
     [{F,Ls} || [F,Ls] <- ets:match(escobar,{{Kind,Name,'$1'},'$2'})].
+
+find(Kind) ->
+    [{MFA,F,Ls} || [MFA,F,Ls] <- ets:match(escobar,{{Kind,'$1','$2'},'$3'})].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-build(Dirs) ->
+build(Dir) ->
     catch ets:delete(escobar),
     ets:new(escobar,[ordered_set,named_table,public]),
-    foreach(fun(D) -> fold_files(D,"\\.xrz$",false,fun ff/2,[]) end, Dirs),
+    fold_files(Dir,"\\.xrz$",false,fun ff/2,[]),
     ok.
 
 ff(File,_) ->

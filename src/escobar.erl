@@ -27,8 +27,9 @@ go() ->
 mk_htmls(Conf) ->
     %% here we need to figure out which files each html file depends on
     %% for now we assume the html file depends only on the {eh}rl file
-    FromTos = [{Dest,Dest} || {_,Dest} <- fetch(targets,Conf)],
-    Files = up2date(FromTos,"\\.xrz\$",{".xrz",".html"}),
+    Dests = fetch(destination,Conf),
+    [Dest] = Dests,
+    Files = up2date(Dest,Dests,"\\.xrz\$",{".xrz",".html"}),
     foreach(fun html/1, Files).
 
 html({XrzFile,HtmlFile}) ->
@@ -78,30 +79,56 @@ a2l(A) -> atom_to_list(A).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 proc_xrefs(Conf) ->
-    escobar_xref:build([Dest || {_,Dest} <- fetch(targets,Conf)]),
-    ok.
+    [Dest] = fetch(destination,Conf),
+    escobar_xref:build(Dest),
+    dump_xrefs(Dest).
+
+dump_xrefs(Dest) ->
+    Filename = filename:join(Dest,"xrefs.html"),
+    MfaFileLines = escobar_xref:find(global_call),
+    {ok,FD} = file:open(Filename,[write]),
+    io:fwrite(FD,"<pre>~n",[]),
+    foldl(fun(M,A) -> dump_writer(FD,M,A) end,"",MfaFileLines),
+    io:fwrite("wrote ~s.~n",[Filename]).
+
+dump_writer(FD,{{M,F,A},File,Lines},Prev) ->
+    case {M,F,A} == Prev of
+      true  -> dump_lines(FD,File,Lines);
+      false ->
+        io:fwrite(FD,"<a name=\"~w:~w/~w\">~w:~w/~w</a>~n",[M,F,A,M,F,A]),
+        dump_lines(FD,File,Lines)
+    end,
+    {M,F,A}.
+
+dump_lines(FD,File,Lines) ->
+    foreach(fun(L) -> dump_lines_f(FD,File,L) end,Lines).
+
+dump_lines_f(FD,File,L) ->
+    io:fwrite(FD,"  <a href=\"~s.html#~w\">~s:~w</a>~n",[File,L,File,L]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mk_xrefs(Conf) ->
     %% we find all {eh}rl files in 'targets', and generate/update an
     %% {eh}rl.xrz file
-    Files = up2date(fetch(targets,Conf),"\\.[eh]rl\$",{"",".xrz"}),
+    [Dest] = fetch(destination,Conf),
+    Targs = fetch(targets,Conf),
+    Files = up2date(Dest,Targs,"\\.[eh]rl\$",{"",".xrz"}),
     foreach(fun update_xref/1, Files).
 
 update_xref({Targ,Dest}) ->
     io:fwrite("~s...",[Dest]),
     Xrefs = reverse(escobar_mk_xref:go(Targ)),
-    {ok,FD} = file:open(Dest,[write,compressed]),
+    {ok,FD} = file:open(Dest,[write]),
     io:fwrite(FD,"{filename,~p}.~n",[Targ]),
     io:fwrite(FD,"~p.~n",[Xrefs]),
     file:close(FD),
     io:fwrite(" ~p~n",[length(Xrefs)]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-up2date(FromTos,RegExp,Exts) ->
-    append([up2date(From,RegExp,To,Exts) || {From,To} <- FromTos]).
+up2date(Dest,Targs,RegExp,Exts) ->
+    append([up2dat(T,RegExp,Dest,Exts) || T <- Targs]).
 
-up2date(From,RegExp,To,Exts) ->
+up2dat(From,RegExp,To,Exts) ->
     FF_F = fun(I,A) -> u2d(I,A,To,Exts) end,
     filelib:fold_files(From,RegExp,true,FF_F,[]).
 
@@ -118,7 +145,8 @@ up2d(Targ,Dest) ->
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-conf({target,From,To},Conf) -> append(targets,{chk_dir(From),ass_dir(To)},Conf);
+conf({target,From},Conf) -> append(targets,chk_dir(From),Conf);
+conf({destination,To},Conf) -> append(destination,ass_dir(To),Conf);
 conf(X,_) -> throw({bad_conf_item,X}).
 
 chk_dir(Dir) ->

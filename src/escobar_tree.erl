@@ -226,11 +226,11 @@ mu(variable) -> dehtml('span', [{class,variable}]);
 mu(error_marker) -> dehtml('span', [{class,error_marker}]).
 
 mu(function,Node) ->
-  M = get_cache(basename),
+  M = hd(string:tokens(get_cache(basename),".")),
   F = atom_name(function_name(Node)),
   A = str(function_arity(Node)),
   dehtml('a', [{class,function},
-               {href,M++"-ref.html#"++F++"/"++A},
+               {href,"xrefs.html#"++M++":"++F++"/"++A},
                {name,F++"/"++A}]);
 mu(include,_Inc) ->
   nil;
