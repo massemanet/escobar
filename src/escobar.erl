@@ -17,11 +17,16 @@
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
 go() ->
-    {ok,Terms} = file:consult(join([os:getenv("HOME"),".escobar","conf.txt"])),
-    Conf = foldl(fun conf/2,new(),Terms),
-    mk_xrefs(Conf),
-    proc_xrefs(Conf),
-    mk_htmls(Conf).
+    Filename = join([os:getenv("HOME"),".escobar","conf.txt"]),
+    case file:consult(Filename) of
+        {ok,Terms} ->
+            Conf = foldl(fun conf/2,new(),Terms),
+            mk_xrefs(Conf),
+            proc_xrefs(Conf),
+            mk_htmls(Conf);
+        {error,enoent} ->
+            {no_config_file,Filename}
+    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mk_htmls(Conf) ->
