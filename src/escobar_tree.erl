@@ -12,7 +12,8 @@
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
 -import(erl_syntax,
-        [get_ann/1,add_ann/2,subtrees/1,update_tree/2,type/1,get_pos/1,
+        [get_ann/1,set_ann/2,add_ann/2,
+         subtrees/1,update_tree/2,type/1,get_pos/1,
          application/2,application_arguments/1,application_operator/1,
          arity_qualifier_argument/1,arity_qualifier_body/1,
          atom_name/1,atom_value/1,
@@ -141,9 +142,17 @@ ann(attribute,Tree) ->
       [Rec|Rest] = attribute_arguments(Tree),
       put_cache({{record_def,safe_name(Rec)},"#rec-"++str_name(Rec)}),
       [add_anno(mu(record,Rec),Rec)|Rest];
-    X when X==include; X==include_lib ->
+    include ->
       [IncTree] = attribute_arguments(Tree),
       Inc = basename(string_value(IncTree)),
+      OIncs = get_cache(includes),
+      Incs = escobar_xref:recurse_inc(Inc),
+      put_cache({includes,usort(Incs++OIncs)}),
+      %%should be a link->.hrl
+      [add_anno(mu(include,IncTree),IncTree)];
+    include_lib ->
+      [IncTree] = attribute_arguments(Tree),
+      Inc = string_value(IncTree),
       OIncs = get_cache(includes),
       Incs = escobar_xref:recurse_inc(Inc),
       put_cache({includes,usort(Incs++OIncs)}),
@@ -180,7 +189,7 @@ ann(macro,Tree) ->
   Args = macro_arguments(Tree),
   new_tree(Tree,macro(add_anno(mu(macro,Tree),Name), Args));
 ann(string,OTree) ->
-  Tree = string(debracket(string_value(OTree))),
+  Tree = set_ann(string(debracket(string_value(OTree))),get_ann(OTree)),
   new_tree(OTree,add_anno(mu(string),Tree));
 ann(variable,Tree) ->
   new_tree(Tree,add_anno(mu(variable),Tree));
@@ -232,8 +241,9 @@ mu(function,Node) ->
   dehtml('a', [{class,function},
                {href,"xrefs.html#"++M++":"++F++"/"++A},
                {name,F++"/"++A}]);
-mu(include,_Inc) ->
-  nil;
+mu(include,Inc) ->
+  File = string_value(Inc),
+  dehtml('a', [{class,include},{href,File}]);
 mu(export,AQ) ->
   M = atom_name(arity_qualifier_body(AQ)),
   A = integer_literal(arity_qualifier_argument(AQ)),
