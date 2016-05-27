@@ -22,6 +22,7 @@ go() ->
         {ok,Terms} ->
             Conf = foldl(fun conf/2,new(),Terms),
             mk_xrefs(Conf),
+            unresolved_includes(Conf),
             proc_xrefs(Conf),
             mk_htmls(Conf);
         {error,enoent} ->
@@ -110,6 +111,42 @@ dump_lines(FD,File,Lines) ->
 
 dump_lines_f(FD,File,L) ->
     io:fwrite(FD,"  <a href=\"~s.html#~w\">~s:~w</a>~n",[File,L,File,L]).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+unresolved_includes(Conf) ->
+    [Dest] = fetch(destination,Conf),
+    Xrzs = filelib:wildcard(filename:join(Dest,"*xrz")),
+    C = lists:foldl(fun(F,A) -> {ok,C} = file:consult(F), [C|A] end,[],Xrzs),
+    Incs = lists:usort([I || {{include,I},_} <- lists:flatten(C)]),
+    [maybe_exit(Dest,I) || I <- Incs].
+
+maybe_exit(Dest,File) ->
+    XrzName = xrz_name(Dest,File),
+    case file:read_file_info(XrzName) of
+        {ok,_} -> ok;
+        _ ->
+            case dig(File) of
+                {ok,LongName} -> update_xref({LongName,XrzName});
+                error -> exit({no_include,File})
+            end
+    end.
+
+dig(File) ->
+    case string:tokens(File,"/") of
+        [App,Include,Basename] ->
+            case code:lib_dir(App) of
+              {error,bad_name} -> error;
+              AppDir ->
+                  AbsName = filename:join([AppDir,Include,Basename]),
+                  case file:read_file_info(AbsName) of
+                      {ok,_} -> {ok,AbsName};
+                      _ -> error
+                  end
+            end
+    end.
+
+xrz_name(Dest,Filename) ->
+    filename:join(Dest,string:join(string:tokens(Filename,"/"),".")++".xrz").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mk_xrefs(Conf) ->

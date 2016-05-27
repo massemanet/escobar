@@ -148,7 +148,6 @@ ann(attribute,Tree) ->
       OIncs = get_cache(includes),
       Incs = escobar_xref:recurse_inc(Inc),
       put_cache({includes,usort(Incs++OIncs)}),
-      %%should be a link->.hrl
       [add_anno(mu(include,IncTree),IncTree)];
     include_lib ->
       [IncTree] = attribute_arguments(Tree),
@@ -156,7 +155,6 @@ ann(attribute,Tree) ->
       OIncs = get_cache(includes),
       Incs = escobar_xref:recurse_inc(Inc),
       put_cache({includes,usort(Incs++OIncs)}),
-      %%should be a link->.hrl
       [add_anno(mu(include,IncTree),IncTree)];
     _ ->
       attribute_arguments(Tree)
@@ -243,7 +241,8 @@ mu(function,Node) ->
                {name,F++"/"++A}]);
 mu(include,Inc) ->
   File = string_value(Inc),
-  dehtml('a', [{class,include},{href,File}]);
+  dehtml('a', [{class,include},
+               {href,string:join(string:tokens(File,"/"),".")++".html"}]);
 mu(export,AQ) ->
   M = atom_name(arity_qualifier_body(AQ)),
   A = integer_literal(arity_qualifier_argument(AQ)),
@@ -298,8 +297,6 @@ mu(application,Node) ->
 mu(X,_Node) ->
   erlang:error({bad_type,X}).
 
-
-
 str_name(X) -> str(safe_name(X)).
 
 safe_name(X) ->
@@ -314,7 +311,7 @@ href(Tag,Anch,Name) ->
   case get_cache({Tag,Name}) of
     [] ->
       Basename = get_cache(basename),
-      Srcs = [Basename|get_cache(includes)],
+      Srcs = [Basename|[dotted_name(I) || I <- get_cache(includes)]],
       case escobar_xref:find(Tag,Name,Srcs) of
         Fs when 1 < length(Fs) ->
           ?LOG([multi_def,[{item,Name},{file,Basename},{files,Fs}]]),
@@ -327,6 +324,9 @@ href(Tag,Anch,Name) ->
       end;
     Mcr -> Mcr
   end.
+
+dotted_name(Filename) ->
+  string:join(string:tokens(Filename,"/"),".").
 
 dehtml(Tag,Atts) ->
   {flatten([$<,str(Tag),$ ,[[str(A),"=\"",str(V),"\" "]||{A,V}<-Atts],$>]),
