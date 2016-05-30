@@ -2,6 +2,9 @@
 %%% Created : 23 May 2016 by mats cronqvist <mats.cronqvist@gmail.com>
 
 %% @doc
+%% crawl http://erlang.org/doc/applications.html to find all exported
+%% functions in OTP.
+%% Return [{Mod,[Fun-Ari...]}...]
 %% @end
 
 -module('escobar_otp').
