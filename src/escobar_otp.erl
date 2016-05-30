@@ -13,7 +13,19 @@ base(Tail) ->
 
 go() ->
   Apps = get_apps(),
-  get_mf(Apps).
+  MFs = get_mf(Apps),
+  mk_mfa(MFs,[]).
+
+mk_mfa([],O) ->
+  O;
+mk_mfa([{m,_}],O) ->
+  O;
+mk_mfa([{m,M},{f,F}|MFs],O) ->
+  mk_mfa(MFs,[{M,[F]}|O]);
+mk_mfa([{m,_},{m,M}|MFs],O) ->
+  mk_mfa([{m,M}|MFs],O);
+mk_mfa([{f,F}|MFs],[{M,Fs}|O]) ->
+  mk_mfa(MFs,[{M,[F|Fs]}|O]).
 
 get_mf(Apps) ->
   lists:append(
@@ -22,13 +34,14 @@ get_mf(Apps) ->
 sxm({tag,"li",Attrs},A) ->
   case proplists:get_value("title",Attrs) of
     undefined -> A;
-    M ->
+    I ->
       case proplists:get_value("expanded",Attrs) of
         "false" ->
+          [M] = string:tokens(I," "),
           [{m,M}|A];
         undefined ->
-          case re:run(M,"[a-z][a-zA-Z0-9_]+-[0-9]+") of
-            {match,[{0,_}]} -> [{f,M}|A];
+          case re:run(I,"[a-z][a-zA-Z0-9_]+-[0-9]+") of
+            {match,[{0,_}]} -> [{f,I}|A];
             _ -> A
           end
       end
