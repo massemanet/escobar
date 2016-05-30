@@ -1,3 +1,4 @@
+% -*- mode: erlang; erlang-indent-level: 4 -*-
 %%%-------------------------------------------------------------------
 %%% File    : escobar.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
@@ -21,6 +22,7 @@ go() ->
     case file:consult(Filename) of
         {ok,Terms} ->
             Conf = foldl(fun conf/2,new(),Terms),
+            cp_css_file(Conf),
             mk_xrefs(Conf),
             unresolved_includes(Conf),
             proc_xrefs(Conf),
@@ -166,7 +168,6 @@ update_xref({Targ,Dest}) ->
     file:close(FD),
     io:fwrite(" ~p~n",[length(Xrefs)]).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 up2date(Dest,Targs,RegExp,Exts) ->
     append([up2dat(T,RegExp,Dest,Exts) || T <- Targs]).
 
@@ -185,6 +186,13 @@ up2d(Targ,Dest) ->
     case file:read_file_info(Dest) of
         {ok,#file_info{mtime=DestMT}} when MT < DestMT -> ok
     end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+cp_css_file(Conf) ->
+    [Dest] = fetch(destination,Conf),
+    Src = filename:join(code:priv_dir(escobar),"escobar.css"),
+    Dst = filename:join(Dest,"escobar.css"),
+    {ok,_} = file:copy(Src,Dst).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 conf({target,From},Conf) -> append(targets,chk_dir(From),Conf);
