@@ -55,7 +55,7 @@ html(Tree,Basename) ->
 %%lists:foldl(fun(Form,Acc) -> [pout(ann(Form))|Acc] end, [], Tree).
 
 pout(Form) ->
-  erl_prettypr:format(Form,[{hook,fun tag/3},{paper,90},{ribbon,650}]).
+  erl_prettypr:format(Form,[{hook,fun tag/3},{paper,80},{ribbon,65}]).
 
 %%% ## formatting
 %%% ### 'tag' - the format hook function
@@ -274,8 +274,23 @@ mu(application,Node) ->
     variable ->
       dehtml('span', [{class,variable}]);
     atom ->
-      dehtml('a', [{href,"#"++join([atom_name(Op),Ar])},
-                   {name,str(get_pos(Op))}]);
+      Basename = get_cache(basename),
+      MFABLs = escobar_xref:find(import),
+      Fu = atom_name(Op),
+      Fun = list_to_atom(Fu),
+      Ari = list_to_integer(Ar),
+      case [M || {{M,F,A},B,_} <- MFABLs,F==Fun,A==Ari,B==Basename] of
+        [] ->
+          dehtml('a', [{href,"#"++join([Fu,Ar])},
+                       {name,str(get_pos(Op))},
+                       {class,function}]);
+        [Mod] ->
+          Mo = atom_to_list(Mod),
+          Ref = external_call(Mo,Fu,Ar),
+          dehtml('a', [{href,Ref},
+                       {name,str(get_pos(Op))},
+                       {class,function}])
+      end;
     module_qualifier ->
       Mod = module_qualifier_argument(Op),
       Fun = module_qualifier_body(Op),
@@ -283,8 +298,10 @@ mu(application,Node) ->
         {atom,atom} ->
           M = atom_name(Mod),
           F = atom_name(Fun),
-          Ref = M++".erl.html#"++F++"/"++Ar,
-          dehtml(a, [{href,Ref},{name,str(get_pos(Op))}]);
+          Ref = external_call(M,F,Ar),
+          dehtml(a, [{href,Ref},
+                     {name,str(get_pos(Op))},
+                     {class,function}]);
         _ ->
           nil
       end;
@@ -296,6 +313,12 @@ mu(application,Node) ->
   end;
 mu(X,_Node) ->
   erlang:error({bad_type,X}).
+
+external_call(M,F,A) ->
+  case ets:lookup(escobar,{otp,M,F++"-"++A}) of
+    []  -> M++".erl.html#"++F++"/"++A;
+    [_] -> "http://erlang.org/doc/man/"++M++".html#"++F++"-"++A
+  end.
 
 str_name(X) -> str(safe_name(X)).
 

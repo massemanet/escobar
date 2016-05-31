@@ -56,4 +56,3 @@ get_apps() ->
 
 sx({tag,"a",Attrs},A) -> [proplists:get_value("href",Attrs)|A];
 sx(_,A) -> A.
-

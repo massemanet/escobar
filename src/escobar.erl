@@ -26,6 +26,7 @@ go() ->
             mk_xrefs(Conf),
             unresolved_includes(Conf),
             proc_xrefs(Conf),
+            mk_otp(Conf),
             mk_htmls(Conf);
         {error,enoent} ->
             {no_config_file,Filename}
@@ -187,6 +188,27 @@ up2d(Targ,Dest) ->
         {ok,#file_info{mtime=DestMT}} when MT < DestMT -> ok
     end.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mk_otp(Conf) ->
+    O = get_otp_data(Conf),
+    [[ets:insert(escobar,{{otp,M,F}}) || F <- Fs] || {M,Fs} <- O].
+
+get_otp_data(Conf) ->
+    [Dest] = fetch(destination,Conf),
+    Dst = filename:join(Dest,"otp.term"),
+    case file:read_file_info(Dst) of
+        {ok,_} ->
+            {ok,[O]} = file:consult(Dst),
+            io:fwrite("read ~s~n",[Dst]),
+            O;
+        _ ->
+            O = escobar_otp:go(),
+            {ok,FD} = file:open(Dst,[write]),
+            io:fwrite(FD,"~p.",[O]),
+            file:close(FD),
+            io:fwrite("wrote ~s~n",[Dst]),
+            O
+    end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 cp_css_file(Conf) ->
     [Dest] = fetch(destination,Conf),

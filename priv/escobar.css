@@ -12,6 +12,4 @@
 .attribute {color: firebrick}
 .error{color: red}
 
-A:link {
-    text-decoration: none;
-}
+a:link {text-decoration: none}
