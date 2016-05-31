@@ -118,48 +118,59 @@ stack_comment_lines([]) ->
 %%% if a node already has an annotation the new one is dropped, except
 %%% if either the new or the old one is has_comments
 
+-type tree() :: any().
+-spec ann(atom(),tree()) -> tree().
+
 ann(binary,Tree) ->
   new_tree(Tree,add_anno("binary",Tree));
 ann(attribute,Tree) ->
   Name = attribute_name(Tree),
-  Args =
   case atom_value(Name) of
     export ->
       AQs = list_elements(hd(attribute_arguments(Tree))),
-      [list([add_anno(mu(export,AQ),AQ) || AQ <- AQs])];
+      Args = [list([add_anno(mu(export,AQ),AQ) || AQ <- AQs])],
+      new_tree(Tree,attribute(Name,Args));
     define ->
       [Macro|Rest] = attribute_arguments(Tree),
       put_cache({{macro_def,safe_name(Macro)},"#mac-"++str_name(Macro)}),
-      case type(Macro) of
-        application ->
-          Op = application_operator(Macro),
-          As = application_arguments(Macro),
-          [application(add_anno(mu(define,Op),Op),As)|Rest];
-        _ ->
-          [add_anno(mu(define,Macro),Macro)|Rest]
-      end;
+      Args =
+        case type(Macro) of
+          application ->
+            Op = application_operator(Macro),
+            As = application_arguments(Macro),
+            [application(add_anno(mu(define,Op),Op),As)|Rest];
+          _ ->
+            [add_anno(mu(define,Macro),Macro)|Rest]
+        end,
+      new_tree(Tree,attribute(Name,Args));
     record ->
       [Rec|Rest] = attribute_arguments(Tree),
       put_cache({{record_def,safe_name(Rec)},"#rec-"++str_name(Rec)}),
-      [add_anno(mu(record,Rec),Rec)|Rest];
+      Args = [add_anno(mu(record,Rec),Rec)|Rest],
+      new_tree(Tree,attribute(Name,Args));
     include ->
       [IncTree] = attribute_arguments(Tree),
       Inc = basename(string_value(IncTree)),
       OIncs = get_cache(includes),
       Incs = escobar_xref:recurse_inc(Inc),
       put_cache({includes,usort(Incs++OIncs)}),
-      [add_anno(mu(include,IncTree),IncTree)];
+      Args = [add_anno(mu(include,IncTree),IncTree)],
+      new_tree(Tree,attribute(Name,Args));
     include_lib ->
       [IncTree] = attribute_arguments(Tree),
       Inc = string_value(IncTree),
       OIncs = get_cache(includes),
       Incs = escobar_xref:recurse_inc(Inc),
       put_cache({includes,usort(Incs++OIncs)}),
-      [add_anno(mu(include,IncTree),IncTree)];
+      Args = [add_anno(mu(include,IncTree),IncTree)],
+      new_tree(Tree,attribute(Name,Args));
+    type ->
+      erl_syntax:text(erl_pp:form(erl_syntax:revert(Tree)));
+    spec ->
+      erl_syntax:text(erl_pp:form(erl_syntax:revert(Tree)));
     _ ->
-      attribute_arguments(Tree)
-  end,
-  new_tree(Tree,attribute(Name,Args));
+      Tree
+  end;
 ann(record_access,Tree) ->
   Arg = record_access_argument(Tree),
   Type = record_access_type(Tree),

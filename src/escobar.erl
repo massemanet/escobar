@@ -42,25 +42,19 @@ mk_htmls(Conf) ->
     foreach(fun html/1, Files).
 
 html({XrzFile,HtmlFile}) ->
-    try
-        Html = get_html(XrzFile),
         {ok,FD} = file:open(HtmlFile,[write]),
         put(fd,FD),
-        try
-            write({html,[],
-                   [{head,[],
-                     [{link,[{rel,"stylesheet"},
-                             {type,"text/css"},
-                             {href,"escobar.css"}],[]}]},
-                    {body,[],
-                     [{'div',[{class,"code"}],
-                       [{pre,[],[{raw,Html}]}]}]}]})
-        after file:close(FD)
-        end
-    catch
-        throw:no_file -> file:delete(XrzFile);
-          _:R -> ?LOG([htmlification_failed,{file,HtmlFile},{reason,R},stack])
-    end.
+        Html = get_html(XrzFile),
+        write({html,[],
+               [{head,[],
+                 [{link,[{rel,"stylesheet"},
+                         {type,"text/css"},
+                         {href,"escobar.css"}],[]}]},
+                {body,[],
+                 [{'div',[{class,"code"}],
+                   [{pre,[],[{raw,Html}]}]}]}]}),
+        file:close(FD),
+        io:fwrite("wrote ~s~n",[HtmlFile]).
 
 get_html(XrzFile) ->
     {ok,FD} = file:open(XrzFile,[read,compressed]),
