@@ -281,7 +281,12 @@ mu(application,Node) ->
       Ari = list_to_integer(Ar),
       case [M || {{M,F,A},B,_} <- MFABLs,F==Fun,A==Ari,B==Basename] of
         [] ->
-          dehtml('a', [{href,"#"++join([Fu,Ar])},
+          Ref =
+            case ets:lookup(escobar,{otp,"erlang",Fu++"-"++Ar}) of
+              []  -> "#"++join([Fu,Ar]);
+              [_] -> external_call("erlang",Fu,Ar)
+            end,
+          dehtml('a', [{href,Ref},
                        {name,str(get_pos(Op))},
                        {class,function}]);
         [Mod] ->
