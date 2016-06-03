@@ -47,9 +47,10 @@
 %%% turn a syntax tree into html by annotating and pretty-printing
 %%% with a hook function
 
-html(Tree,Basename) ->
+html(Tree,Longname) ->
   clear_cache(),
-  put_cache({basename,Basename}),
+  put_cache({longname,Longname}),
+  put_cache({basename,filename:basename(Longname)}),
   pout(ann(type(Tree),Tree)).
 
 %%lists:foldl(fun(Form,Acc) -> [pout(ann(Form))|Acc] end, [], Tree).
@@ -162,14 +163,14 @@ ann(attribute,Tree) ->
       OIncs = get_cache(includes),
       Incs = escobar_xref:recurse_inc(Inc),
       put_cache({includes,usort(Incs++OIncs)}),
-      Args = [add_anno(mu(include,IncTree),IncTree)],
+      Args = [add_anno(mu(include_lib,IncTree),IncTree)],
       new_tree(Tree,attribute(Name,Args));
     type ->
       erl_syntax:text(erl_pp:form(erl_syntax:revert(Tree)));
     spec ->
       erl_syntax:text(erl_pp:form(erl_syntax:revert(Tree)));
     _ ->
-      Tree
+      new_tree(Tree,Tree)
   end;
 ann(record_access,Tree) ->
   Arg = record_access_argument(Tree),
@@ -253,7 +254,11 @@ mu(function,Node) ->
 mu(include,Inc) ->
   File = string_value(Inc),
   dehtml('a', [{class,include},
-               {href,string:join(string:tokens(File,"/"),".")++".html"}]);
+               {href,dotted_name(include,File)++".html"}]);
+mu(include_lib,Inc) ->
+  File = string_value(Inc),
+  dehtml('a', [{class,include},
+               {href,dotted_name(include_lib,File)++".html"}]);
 mu(export,AQ) ->
   M = atom_name(arity_qualifier_body(AQ)),
   A = integer_literal(arity_qualifier_argument(AQ)),
@@ -365,6 +370,17 @@ href(Tag,Anch,Name) ->
   end.
 
 dotted_name(Filename) ->
+  try dotted_name(include,Filename)
+  catch _:R1 ->
+      try dotted_name(include_lib,Filename)
+      catch R2 -> exit({R1,R2})
+      end
+  end.
+
+dotted_name(Type,Filename) ->
+  dot(escobar:do_find_inc(get_cache(longname),{Type,Filename})).
+
+dot(Filename) ->
   string:join(string:tokens(Filename,"/"),".").
 
 dehtml(Tag,Atts) ->

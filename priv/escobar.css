@@ -1,15 +1,16 @@
-.comment {color: brown}
-.export {color: darkorchid}
-.import {color: darkorchid}
-.string {color: maroon}
-.builtin {color: dodgerblue}
-.guard {color: mediumturquoise}
-.function {color: blue}
-.variable {color: MediumAquamarine}
-.macro {color: mediumpurple}
-.record {color: orangered}
-.call {color: purple}
+.comment   {color: brown}
+.export    {color: darkorchid}
+.import    {color: darkorchid}
+.string    {color: maroon}
+.include   {color: maroon}
+.builtin   {color: dodgerblue}
+.guard     {color: mediumturquoise}
+.function  {color: blue}
+.variable  {color: MediumAquamarine}
+.macro     {color: mediumpurple}
+.record    {color: orangered}
+.call      {color: purple}
 .attribute {color: firebrick}
-.error{color: red}
+.error     {color: red}
 
 a:link {text-decoration: none}

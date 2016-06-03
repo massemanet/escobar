@@ -61,6 +61,7 @@ ff(File,_) ->
 xrefs(MOD,{{import,{M,FAs}},L}) ->     xfa(import,MOD,L,M,FAs);
 xrefs(MOD,{{export,FAs},L}) ->         xfa(export,MOD,L,tom(MOD),FAs);
 xrefs(MOD,{{include,File},L}) ->       bagit({include,basename(File),MOD},L);
+xrefs(MOD,{{include_lib,File},L}) ->   bagit({include_lib,File,MOD},L);
 xrefs(MOD,{{macro_def,Macro},L}) ->    bagit({macro_def,Macro,MOD},L);
 xrefs(MOD,{{record_def,Record},L}) ->  bagit({record_def,Record,MOD},L);
 xrefs(MOD,{{global_call,{M,F,A}},L})-> bagit({global_call,{M,F,A},MOD},L);

@@ -10,7 +10,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--export([go/0,log/2]).
+-export([go/0,log/2,do_find_inc/2]).
 
 -import(lists,[foldl/3,append/1,foreach/2,reverse/1,member/2]).
 -import(dict,[new/0,fetch/2,append/3]).
@@ -60,7 +60,7 @@ get_html(XrzFile) ->
     {ok,FD} = file:open(XrzFile,[read,compressed]),
     try
         {ok,{filename,RL}} = io:read(FD,''),
-        escobar_tree:html(escobar_file:get_tree(RL),filename:basename(RL))
+        escobar_tree:html(escobar_file:get_tree(RL),RL)
     after
         file:close(FD)
     end.
@@ -113,31 +113,41 @@ dump_lines_f(FD,File,L) ->
 unresolved_includes(Conf) ->
     [Dest] = fetch(destination,Conf),
     Xrzs = filelib:wildcard(filename:join(Dest,"*xrz")),
-    C = lists:foldl(fun(F,A) -> {ok,C} = file:consult(F), [C|A] end,[],Xrzs),
-    Incs = lists:usort([I || {{include,I},_} <- lists:flatten(C)]),
-    [maybe_exit(Dest,I) || I <- Incs].
-
-maybe_exit(Dest,File) ->
-    XrzName = xrz_name(Dest,File),
-    case file:read_file_info(XrzName) of
-        {ok,_} -> ok;
-        _ ->
-            case dig(File) of
-                {ok,LongName} -> update_xref({LongName,XrzName});
-                error -> exit({no_include,File})
-            end
+    Cs = lists:foldl(fun(F,A) -> {ok,C} = file:consult(F), [C|A] end,[],Xrzs),
+    Incs = lists:append([find_inc(FN,Xs) || [{filename,FN},Xs] <- Cs]),
+    case lists:usort([maybe_update(Dest,I) || I <- Incs]) of
+        [old] -> ok;
+        [] -> ok;
+        _ -> unresolved_includes(Conf)
     end.
 
-dig(File) ->
+maybe_update(Dest,Longname) ->
+    XrzName = xrz_name(Dest,Longname),
+    case file:read_file_info(XrzName) of
+        {ok,_} -> old;
+        _ -> update_xref({Longname,XrzName})
+    end.
+
+find_inc(Src,Xs) ->
+    [do_find_inc(Src,{T,I}) || {{T,I},_} <- Xs,
+                               lists:member(T,[include,include_lib])].
+
+do_find_inc(Src,{include,File}) ->
+    AbsName = filename:join(filename:dirname(Src),File),
+    case file:read_file_info(AbsName) of
+        {ok,_} -> AbsName;
+        _ -> exit({no_include_file,AbsName})
+    end;
+do_find_inc(_,{include_lib,File}) ->
     case string:tokens(File,"/") of
         [App,Include,Basename] ->
             case code:lib_dir(App) of
-              {error,bad_name} -> error;
+              {error,bad_name} -> exit({no_include_lib,App});
               AppDir ->
                   AbsName = filename:join([AppDir,Include,Basename]),
                   case file:read_file_info(AbsName) of
-                      {ok,_} -> {ok,AbsName};
-                      _ -> error
+                      {ok,_} -> AbsName;
+                      _ -> exit({no_include_file,AbsName})
                   end
             end
     end.
@@ -147,11 +157,11 @@ xrz_name(Dest,Filename) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mk_xrefs(Conf) ->
-    %% we find all {eh}rl files in 'targets', and generate/update an
-    %% {eh}rl.xrz file
+    %% we find all erl files in 'targets', and generate/update an
+    %% erl.xrz file
     [Dest] = fetch(destination,Conf),
     Targs = fetch(targets,Conf),
-    Files = up2date(Dest,Targs,"\\.[eh]rl\$",{"",".xrz"}),
+    Files = up2date(Dest,Targs,"\\.erl\$",{"",".xrz"}),
     foreach(fun update_xref/1, Files).
 
 update_xref({Targ,Dest}) ->

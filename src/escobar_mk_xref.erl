@@ -182,12 +182,12 @@ h_macro(Macro) ->
 
 h_attribute(Name,Args) ->
     case Name of
-        define -> macro_def(Args);
-        import -> import(Args);
-        export -> export(Args);
-        include -> include(Args);
-        include_lib -> include(Args);
-        record -> record_def(Args);
+        define      -> macro_def(Args);
+        import      -> import(Args);
+        export      -> export(Args);
+        include     -> include(Args);
+        include_lib -> include_lib(Args);
+        record      -> record_def(Args);
         _ -> ok
     end.
 
@@ -213,6 +213,9 @@ aqs(AQ) -> {atom_value(arity_qualifier_body(AQ)),
 
 include(Args) ->
     {include, string_value(hd(Args)),get_pos(hd(Args))}.
+
+include_lib(Args) ->
+    {include_lib, string_value(hd(Args)),get_pos(hd(Args))}.
 
 record_def(Args) ->
     {record_def, atom_value(hd(Args)),get_pos(hd(Args))}.
