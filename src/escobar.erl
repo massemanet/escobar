@@ -133,7 +133,7 @@ find_inc(Src,Xs) ->
                                lists:member(T,[include,include_lib])].
 
 do_find_inc(Src,{include,File}) ->
-    AbsName = filename:join(filename:dirname(Src),File),
+    AbsName = normalize(filename:join(filename:dirname(Src),File)),
     case file:read_file_info(AbsName) of
         {ok,_} -> AbsName;
         _ -> exit({no_include_file,AbsName})
@@ -151,6 +151,14 @@ do_find_inc(_,{include_lib,File}) ->
                   end
             end
     end.
+
+normalize(Filename) ->
+    "/"++string:join(normal(string:tokens(Filename,"/")),"/").
+
+normal([])         -> [];
+normal([_,".."|T]) -> normal(T);
+normal(["."|T])    -> normal(T);
+normal([E|T])      -> [E]++normal(T).
 
 xrz_name(Dest,Filename) ->
     filename:join(Dest,string:join(string:tokens(Filename,"/"),".")++".xrz").
