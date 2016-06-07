@@ -378,7 +378,7 @@ dotted_name(Filename) ->
   end.
 
 dotted_name(Type,Filename) ->
-  dot(escobar:do_find_inc(get_cache(longname),{Type,Filename})).
+  dot(escobar:do_find_inc(get_cache(longname),{Type,Filename},dummy)).
 
 dot(Filename) ->
   string:join(string:tokens(Filename,"/"),".").

@@ -10,7 +10,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--export([go/0,log/2,do_find_inc/2]).
+-export([go/0,log/2,do_find_inc/3]).
 
 -import(lists,[foldl/3,append/1,foreach/2,reverse/1,member/2]).
 -import(dict,[new/0,fetch/2,append/3]).
@@ -112,9 +112,10 @@ dump_lines_f(FD,File,L) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 unresolved_includes(Conf) ->
     [Dest] = fetch(destination,Conf),
+    Ts = fetch(targets,Conf),
     Xrzs = filelib:wildcard(filename:join(Dest,"*xrz")),
     Cs = lists:foldl(fun(F,A) -> {ok,C} = file:consult(F), [C|A] end,[],Xrzs),
-    Incs = lists:append([find_inc(FN,Xs) || [{filename,FN},Xs] <- Cs]),
+    Incs = lists:append([find_inc(FN,Xs,Ts) || [{filename,FN},Xs] <- Cs]),
     case lists:usort([maybe_update(Dest,I) || I <- Incs]) of
         [old] -> ok;
         [] -> ok;
@@ -128,28 +129,38 @@ maybe_update(Dest,Longname) ->
         _ -> update_xref({Longname,XrzName})
     end.
 
-find_inc(Src,Xs) ->
-    [do_find_inc(Src,{T,I}) || {{T,I},_} <- Xs,
-                               lists:member(T,[include,include_lib])].
+find_inc(Src,Xs,Targets) ->
+    [do_find_inc(Src,{T,I},Targets) || {{T,I},_} <- Xs,
+                                       lists:member(T,[include,include_lib])].
 
-do_find_inc(Src,{include,File}) ->
+do_find_inc(Src,{include,File},_) ->
     AbsName = normalize(filename:join(filename:dirname(Src),File)),
     case file:read_file_info(AbsName) of
         {ok,_} -> AbsName;
         _ -> exit({no_include_file,AbsName})
     end;
-do_find_inc(_,{include_lib,File}) ->
-    case string:tokens(File,"/") of
-        [App,Include,Basename] ->
-            case code:lib_dir(App) of
-              {error,bad_name} -> exit({no_include_lib,App});
-              AppDir ->
-                  AbsName = filename:join([AppDir,Include,Basename]),
-                  case file:read_file_info(AbsName) of
-                      {ok,_} -> AbsName;
-                      _ -> exit({no_include_file,AbsName})
-                  end
-            end
+do_find_inc(_,{include_lib,File},Targets) ->
+    [App,Include,Basename] = string:tokens(File,"/"),
+    AbsName =
+        case code:lib_dir(App) of
+            {error,bad_name} ->
+                case look_for(Basename,App,Targets) of
+                    not_found -> exit({no_include_lib,App});
+                    A -> A
+                end;
+            AppDir ->
+                filename:join([AppDir,Include,Basename])
+        end,
+    case file:read_file_info(AbsName) of
+        {ok,_} -> AbsName;
+        _ -> exit({no_include_file,AbsName})
+    end.
+
+look_for(Basename,App,Targets) ->
+    case [T || T <- Targets, filename:basename(T) == App] of
+        [] -> not_found;
+        [Target] ->
+            filelib:wildcard(filename:join(Target++"*",include,Basename))
     end.
 
 normalize(Filename) ->
