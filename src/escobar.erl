@@ -38,7 +38,7 @@ mk_htmls(Conf) ->
     %% for now we assume the html file depends only on the {eh}rl file
     Dests = fetch(destination,Conf),
     [Dest] = Dests,
-    Files = up2date(Dest,Dests,"\\.xrz\$",{".xrz",".html"}),
+    Files = up2date(Dest,Dests,"/*.xrz",{".xrz",".html"}),
     foreach(fun html/1, Files).
 
 html({XrzFile,HtmlFile}) ->
@@ -134,33 +134,63 @@ find_inc(Src,Xs,Targets) ->
                                        lists:member(T,[include,include_lib])].
 
 do_find_inc(Src,{include,File},_) ->
-    AbsName = normalize(filename:join(filename:dirname(Src),File)),
-    case file:read_file_info(AbsName) of
-        {ok,_} -> AbsName;
-        _ -> exit({no_include_file,AbsName})
-    end;
-do_find_inc(_,{include_lib,File},Targets) ->
-    [App,Include,Basename] = string:tokens(File,"/"),
+    Dirname = filename:dirname(Src),
+    take_first(
+      fun exists/1,
+      [normalize(filename:join(Dirname,File)),
+       case lists:member(filename:basename(Dirname),["src"]) of
+           true -> filename:join([filename:dirname(Dirname),"include",File]);
+           false-> []
+       end],
+     Src);
+do_find_inc(Src,{include_lib,File},Targets) ->
     AbsName =
-        case code:lib_dir(App) of
-            {error,bad_name} ->
-                case look_for(Basename,App,Targets) of
-                    not_found -> exit({no_include_lib,App});
-                    A -> A
-                end;
-            AppDir ->
-                filename:join([AppDir,Include,Basename])
+        case string:tokens(File,"/") of
+            [_] ->
+                do_find_inc(Src,{include,File},Targets);
+            [App,Include,Basename] ->
+                case code:lib_dir(App) of
+                    {error,bad_name} ->
+                        case look_for(App,Include,Basename,Targets) of
+                            not_found -> exit({no_include_lib,App});
+                            A -> A
+                        end;
+                    AppDir ->
+                        filename:join([AppDir,Include,Basename])
+                end
         end,
     case file:read_file_info(AbsName) of
         {ok,_} -> AbsName;
         _ -> exit({no_include_file,AbsName})
     end.
 
-look_for(Basename,App,Targets) ->
+take_first(Fun,Alts,Err) ->
+    try take_first(Fun,Alts)
+    catch _:_ -> exit({not_found,Err,Alts})
+    end.
+
+take_first(_,[]) ->
+    exit(no_alts);
+take_first(Fun,[Alt|Alts]) ->
+    try Fun(Alt)
+    catch _:_ -> take_first(Fun,Alts)
+    end.
+
+exists(Filename) ->
+    case file:read_file_info(Filename) of
+        {ok,_} -> Filename;
+        _ -> exit(dont_exist)
+    end.
+
+look_for(App,Include,Basename,Targets) ->
     case [T || T <- Targets, filename:basename(T) == App] of
         [] -> not_found;
         [Target] ->
-            filelib:wildcard(filename:join(Target++"*",include,Basename))
+            case filelib:wildcard(
+                   filename:join([Target++"*",Include,Basename])) of
+                [] -> not_found;
+                [File] -> File
+            end
     end.
 
 normalize(Filename) ->
@@ -180,7 +210,7 @@ mk_xrefs(Conf) ->
     %% erl.xrz file
     [Dest] = fetch(destination,Conf),
     Targs = fetch(targets,Conf),
-    Files = up2date(Dest,Targs,"\\.erl\$",{"",".xrz"}),
+    Files = up2date(Dest,Targs,"/**/src/**/*.erl",{"",".xrz"}),
     foreach(fun update_xref/1, Files).
 
 update_xref({Targ,Dest}) ->
@@ -192,12 +222,13 @@ update_xref({Targ,Dest}) ->
     file:close(FD),
     io:fwrite(" ~p~n",[length(Xrefs)]).
 
-up2date(Dest,Targs,RegExp,Exts) ->
-    append([up2dat(T,RegExp,Dest,Exts) || T <- Targs]).
+up2date(Dest,Targs,Pattern,Exts) ->
+    append([up2dat(T,Dest,Exts,Pattern) || T <- Targs]).
 
-up2dat(From,RegExp,To,Exts) ->
-    FF_F = fun(I,A) -> u2d(I,A,To,Exts) end,
-    filelib:fold_files(From,RegExp,true,FF_F,[]).
+up2dat(Targ,Dest,Exts,Pattern) ->
+    FF_F = fun(I,A) -> u2d(I,A,Dest,Exts) end,
+    Files = filelib:wildcard(Targ++Pattern),
+    foldl(FF_F,[],Files).
 
 u2d(Targ,Acc,To,{OldExt,NewExt}) ->
     Dest = join([To,filename:basename(Targ,OldExt)])++NewExt,
