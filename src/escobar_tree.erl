@@ -166,6 +166,8 @@ ann(attribute,Tree) ->
       put_cache({includes,usort(Incs++OIncs)}),
       Args = [add_anno(mu(include_lib,IncTree),IncTree)],
       new_tree(Tree,attribute(Name,Args));
+    callback ->
+      erl_syntax:text(erl_pp:form(erl_syntax:revert(Tree)));
     type ->
       erl_syntax:text(erl_pp:form(erl_syntax:revert(Tree)));
     spec ->
