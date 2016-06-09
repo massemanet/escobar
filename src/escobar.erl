@@ -10,7 +10,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--export([go/0,log/2,do_find_inc/3]).
+-export([go/0,log/2,find_include/4]).
 
 -import(lists,[foldl/3,append/1,foreach/2,reverse/1,member/2]).
 -import(dict,[new/0,fetch/2,append/3]).
@@ -32,6 +32,12 @@ go() ->
             {no_config_file,Filename}
     end.
 
+find_include(Longname,Type,Filename,Dest) ->
+    Basename = filename:basename(Filename),
+    case filelib:wildcard(filename:join(Dest,"*."++Basename++".xrz")) of
+        [XrzFile] -> filename:basename(XrzFile,".xrz");
+        _ -> exit({Longname,Type,Filename,Dest})
+    end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mk_htmls(Conf) ->
     %% here we need to figure out which files each html file depends on
@@ -39,12 +45,12 @@ mk_htmls(Conf) ->
     Dests = fetch(destination,Conf),
     [Dest] = Dests,
     Files = up2date(Dest,Dests,"/*.xrz",{".xrz",".html"}),
-    foreach(fun html/1, Files).
+    foreach(fun(F) -> html(F,Dest) end, Files).
 
-html({XrzFile,HtmlFile}) ->
+html({XrzFile,HtmlFile},Dest) ->
         {ok,FD} = file:open(HtmlFile,[write]),
         put(fd,FD),
-        Html = get_html(XrzFile),
+        Html = get_html(XrzFile,Dest),
         write({html,[],
                [{head,[],
                  [{link,[{rel,"stylesheet"},
@@ -56,11 +62,11 @@ html({XrzFile,HtmlFile}) ->
         file:close(FD),
         io:fwrite("wrote ~s~n",[HtmlFile]).
 
-get_html(XrzFile) ->
+get_html(XrzFile,Dest) ->
     {ok,FD} = file:open(XrzFile,[read,compressed]),
     try
         {ok,{filename,RL}} = io:read(FD,''),
-        escobar_tree:html(escobar_file:get_tree(RL),RL)
+        escobar_tree:html(escobar_file:get_tree(RL),RL,Dest)
     after
         file:close(FD)
     end.

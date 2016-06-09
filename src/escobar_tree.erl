@@ -7,7 +7,7 @@
 %%%-------------------------------------------------------------------
 -module(escobar_tree).
 
--export([html/2]).
+-export([html/3]).
 
 -define(LOG(T),escobar:log(process_info(self()),T)).
 
@@ -47,10 +47,11 @@
 %%% turn a syntax tree into html by annotating and pretty-printing
 %%% with a hook function
 
-html(Tree,Longname) ->
+html(Tree,Longname,Dest) ->
   clear_cache(),
   put_cache({longname,Longname}),
   put_cache({basename,filename:basename(Longname)}),
+  put_cache({dest,Dest}),
   pout(ann(type(Tree),Tree)).
 
 %%lists:foldl(fun(Form,Acc) -> [pout(ann(Form))|Acc] end, [], Tree).
@@ -378,10 +379,9 @@ dotted_name(Filename) ->
   end.
 
 dotted_name(Type,Filename) ->
-  dot(escobar:do_find_inc(get_cache(longname),{Type,Filename},dummy)).
-
-dot(Filename) ->
-  string:join(string:tokens(Filename,"/"),".").
+  Dest = get_cache(dest),
+  Longname = get_cache(longname),
+  escobar:find_include(Longname,Type,Filename,Dest).
 
 dehtml(Tag,Atts) ->
   {flatten([$<,str(Tag),$ ,[[str(A),"=\"",str(V),"\" "]||{A,V}<-Atts],$>]),
