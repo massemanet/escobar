@@ -57,7 +57,7 @@ html(Tree,Longname,Dest) ->
 %%lists:foldl(fun(Form,Acc) -> [pout(ann(Form))|Acc] end, [], Tree).
 
 pout(Form) ->
-  erl_prettypr:format(Form,[{hook,fun tag/3},{paper,80},{ribbon,65}]).
+  erl_prettypr:format(Form,[{hook,fun tag/3},{paper,80},{ribbon,80}]).
 
 %%% ## formatting
 %%% ### 'tag' - the format hook function
